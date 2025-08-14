@@ -129,7 +129,7 @@ BOOL InstallAesDecryption(PAES pAes) {
         printf("[!] BCryptDecrypt[1] Fehlgeschlagen mit Error: 0x%0.8X \n", STATUS);
         bSTATE = FALSE; goto _EndOfFunc;
     }
-    // allocating enough memory (of size cbPlainText)
+    
     pbPlainText = (PBYTE)HeapAlloc(GetProcessHeap(), 0, cbPlainText);
     if (pbPlainText == NULL) {
         bSTATE = FALSE; goto _EndOfFunc;
